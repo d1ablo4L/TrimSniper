@@ -288,21 +288,23 @@ class Sniper:
         return "no_cars"
 
     def _confirm_yes(self):
-        """Press Yes on the BUY_OUT confirm dialog and observe the screen
-        until an outcome appears. State-machine instead of brute-force retry:
+        """Press Yes on the BUY_OUT confirm dialog and observe the screen.
 
-        - **BUY_OUT** (confirm dialog still showing) -> Enter was dropped,
-          re-press (bounded).
-        - **BUYOUT_PROGRESS** or **UNKNOWN** -> request likely in flight,
-          just keep polling. Never re-press here, since an unseen outcome
-          popup could be dismissed by a stray Enter.
-        - **BUYOUT_SUCCESS / BUYOUT_FAILED** -> done, return it.
+        State machine:
+        - **BUY_OUT** (confirm still showing): Enter was dropped, re-press.
+        - **BUYOUT_PROGRESS**: request in flight, slow polling, wait outcome.
+        - **BUYOUT_SUCCESS / BUYOUT_FAILED**: done.
+        - **UNKNOWN**: keep polling briefly, then bail (likely a popup we
+          don't have a template for, e.g. Place Bid from a dropped Down).
 
-        Times out after `cfg.timeout_outcome_s` of no outcome.
+        Initial budget is 5s - keeps polling bounded if we never see any
+        recognisable buyout screen. Bumps to `cfg.timeout_outcome_s` once
+        we know the request is in flight (BUYOUT_PROGRESS).
         """
         cfg = self.cfg
         self._press("enter")
-        deadline = self.clock() + cfg.timeout_outcome_s
+        deadline = self.clock() + 5.0          # initial: 5s to see something
+        in_flight = False
         enter_attempts = 1
         targets = {Screen.BUY_OUT, Screen.BUYOUT_PROGRESS,
                    Screen.BUYOUT_SUCCESS, Screen.BUYOUT_FAILED}
@@ -320,7 +322,13 @@ class Sniper:
             if s == Screen.BUY_OUT and enter_attempts < 4:
                 self._press("enter")
                 enter_attempts += 1
-            self._poll_delay()
+            elif s == Screen.BUYOUT_PROGRESS and not in_flight:
+                in_flight = True
+                deadline = self.clock() + cfg.timeout_outcome_s
+            if in_flight:
+                self.sleeper(0.2)              # 5 Hz - request is in flight, calm
+            else:
+                self._poll_delay()             # ~15 Hz - still figuring out state
         return None
 
     def _collect(self) -> None:
