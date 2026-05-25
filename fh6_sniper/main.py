@@ -39,20 +39,39 @@ def main() -> None:
     overlay = Overlay(
         hide_from_capture=not getattr(cfg, "overlay_capturable", False))
 
-    state = {"sniper": None, "thread": None}
+    state = {
+        "sniper": None,
+        "thread": None,
+        # display-side running totals - accumulate across stop/start cycles
+        # so the overlay's BOUGHT / SEARCHES / FAILS don't reset every run.
+        "display": {"searches": 0, "bought": 0, "fails": 0},
+        # last raw values seen from the current Sniper - used to compute
+        # deltas (new Sniper instances start their internal counters at 0).
+        "last_bot_stats": (0, 0, 0),
+    }
     purchase_log = paths.app_dir() / cfg.log_path
 
     def on_purchase(loop_seconds, total):
         notifier.log_purchase(purchase_log, "bought", loop_seconds, total)
         notifier.notify_success(total, cfg.notify_sound, cfg.notify_toast)
 
+    def on_stats(searches, bought, fails):
+        last_s, last_b, last_f = state["last_bot_stats"]
+        d = state["display"]
+        d["searches"] += max(0, searches - last_s)
+        d["bought"]   += max(0, bought   - last_b)
+        d["fails"]    += max(0, fails    - last_f)
+        state["last_bot_stats"] = (searches, bought, fails)
+        overlay.set_stats(d["searches"], d["bought"], d["fails"])
+
     def start():
         if state["thread"] and state["thread"].is_alive():
             return
         capture.focus_window(cfg.window_title)
+        state["last_bot_stats"] = (0, 0, 0)        # new Sniper, fresh deltas
         sniper = Sniper(io, cfg, on_purchase=on_purchase,
                         on_status=overlay.set_status,
-                        on_stats=overlay.set_stats)
+                        on_stats=on_stats)
 
         def _run_safe():
             try:

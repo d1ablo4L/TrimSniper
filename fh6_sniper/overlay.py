@@ -164,11 +164,11 @@ class Overlay:
             fg={"running": _LIME, "paused": _AMBER, "stopped": _DIM}[state])
         running = state != "stopped"
         self._set_button(running)
-        if running and not self._active:        # fresh session, reset stats
+        if running and self._started is None:    # first ever start, init timer
             self._started = time.monotonic()
-            for v in (self._bought_var, self._searches_var, self._fails_var):
-                v.set("0")
             self._time_var.set("00:00")
+        # Stats (bought / searches / fails) accumulate across stop/start
+        # cycles and only clear when the overlay is closed.
         self._active = running
 
     def _apply_stats(self, searches: int, bought: int, fails: int):
