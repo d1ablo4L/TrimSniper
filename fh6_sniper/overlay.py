@@ -26,6 +26,7 @@ _SETTINGS_FIELDS = (
     ("FEEDBACK",         "notify_sound",           "Play success beep sounds",           "bool", None),
     ("FEEDBACK",         "notify_toast",           "Windows toast on success",           "bool", None),
     ("FEEDBACK",         "hdr_mode",               "HDR mode (widens lime detection)",   "bool", None),
+    ("FEEDBACK",         "overlay_capturable",     "Show overlay in screenshots & recordings", "bool", None),
     ("SNIPER BEHAVIOUR", "match_threshold",        "Match threshold",        "slider", (0.50, 1.00, 0.01)),
     ("SNIPER BEHAVIOUR", "loop_pace_s",            "Loop pace (seconds)",    "float",  None),
     ("SNIPER BEHAVIOUR", "buyout_select_delay_ms", "Buyout select delay (ms)", "int",  None),
@@ -75,12 +76,12 @@ class Overlay:
         self._show_tab("STATUS")
         self.root.update_idletasks()
         self.root.geometry(f"344x{self.root.winfo_reqheight()}+24+24")
-        if hide_from_capture:
-            self._exclude_from_capture()
+        self.set_capturable(not hide_from_capture)
         self._tick()
 
-    def _exclude_from_capture(self):
-        """Hide the overlay from screen capture (WDA_EXCLUDEFROMCAPTURE)."""
+    def set_capturable(self, capturable: bool) -> None:
+        """Toggle whether the overlay appears in screen captures.
+        False applies WDA_EXCLUDEFROMCAPTURE; True restores WDA_NONE."""
         try:
             user32 = ctypes.windll.user32
             hwnd = self.root.winfo_id()
@@ -88,7 +89,8 @@ class Overlay:
             while parent:
                 hwnd = parent
                 parent = user32.GetParent(hwnd)
-            user32.SetWindowDisplayAffinity(hwnd, 0x11)
+            affinity = 0x00 if capturable else 0x11
+            user32.SetWindowDisplayAffinity(hwnd, affinity)
         except Exception:
             pass
 

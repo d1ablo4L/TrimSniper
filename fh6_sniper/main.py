@@ -114,8 +114,12 @@ def main() -> None:
         prev_bg = cfg.moving_background
         prev_start = cfg.hotkey_start_stop
         prev_panic = cfg.hotkey_panic
+        prev_capturable = getattr(cfg, "overlay_capturable", False)
         for key, value in values.items():
             setattr(cfg, key, value)
+        if cfg.overlay_capturable != prev_capturable:
+            overlay.set_capturable(cfg.overlay_capturable)
+            log.info("overlay capturable -> %s", cfg.overlay_capturable)
         try:
             save_config(cfg, paths.app_dir() / "config.json")
         except Exception as exc:

@@ -2,10 +2,10 @@
 
 Newest changes first. Each section header is the release date.
 
-## 2026-05-26
+## v1.1.0 - 2026-05-26
 
 ### Settings panel
-New **Settings** tab in the overlay. Edit match sensitivity, loop speed, auto-stop limits, notifications, hotkeys, HDR mode, and moving background. Saves and applies live.
+New **Settings** tab in the overlay. Edit match sensitivity, loop speed, auto-stop limits, notifications, hotkeys, HDR mode, moving background, and overlay visibility in screenshots / recordings. Saves and applies live.
 
 ### Resolution & monitor support
 - 1080p, 1440p, 4K: all work.

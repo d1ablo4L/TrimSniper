@@ -48,6 +48,11 @@ class Config:
     collect_after_buyout: bool = True
     notify_sound: bool = True
     notify_toast: bool = True
+    # When False the overlay window is hidden from screen capture
+    # (WDA_EXCLUDEFROMCAPTURE) so the bot can't accidentally template-match
+    # against its own HUD. Set True if you want to screenshot or stream the
+    # overlay.
+    overlay_capturable: bool = False
     # paths
     log_path: str = "logs/purchases.csv"
     template_dir: str = "templates"
