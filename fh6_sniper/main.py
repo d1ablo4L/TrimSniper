@@ -1,13 +1,29 @@
 """Entry point: wires config, templates, sniper, overlay, and hotkeys."""
 from __future__ import annotations
+import json
 import logging
 import sys
 import threading
+from dataclasses import asdict
 from pynput import keyboard
 from . import capture, notifier, paths, vision
 from .config import load_config, save_config
 from .overlay import Overlay
 from .sniper import GameIO, Sniper
+
+
+def _log_config(cfg) -> None:
+    """Dump the loaded config to the log as a single JSON line.
+    Helps when triaging user-submitted logs - we can see what the bot
+    was configured with at session start."""
+    body = asdict(cfg)
+    declared = set(cfg.__dataclass_fields__)
+    for key, value in cfg.__dict__.items():           # include extras
+        if key not in declared:
+            body[key] = value
+    body = {k: list(v) if isinstance(v, tuple) else v for k, v in body.items()}
+    logging.getLogger("fh6").info("config snapshot: %s",
+                                   json.dumps(body, sort_keys=True))
 
 
 def _setup_logging():
@@ -32,6 +48,7 @@ def main() -> None:
     log_path = _setup_logging()
     logging.getLogger("fh6").info("FH6 Sniper starting (log: %s)", log_path)
     cfg = load_config(paths.app_dir() / "config.json")
+    _log_config(cfg)
     templates = vision.load_templates(
         paths.app_dir() / cfg.template_dir,
         moving_background=cfg.moving_background)
@@ -115,8 +132,14 @@ def main() -> None:
         prev_start = cfg.hotkey_start_stop
         prev_panic = cfg.hotkey_panic
         prev_capturable = getattr(cfg, "overlay_capturable", False)
+        diffs = []
         for key, value in values.items():
+            old = getattr(cfg, key, None)
+            if old != value:
+                diffs.append(f"{key} {old!r} -> {value!r}")
             setattr(cfg, key, value)
+        if diffs:
+            log.info("settings changed: %s", ", ".join(diffs))
         if cfg.overlay_capturable != prev_capturable:
             overlay.set_capturable(cfg.overlay_capturable)
             log.info("overlay capturable -> %s", cfg.overlay_capturable)

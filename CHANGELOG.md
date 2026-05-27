@@ -2,6 +2,14 @@
 
 Newest changes first. Each section header is the release date.
 
+## v1.1.2 - 2026-05-27
+
+### Clearer error when the bot can't see the game
+If the bot starts and can't identify any FH6 menu screens (most often because the game language isn't English), the status now reads **"Set game language to English"** instead of the vague "could not recover".
+
+### Better diagnostic logs
+The full config is now logged at session start, and any setting changes made from the Settings tab get logged with old → new values. Useful when sharing `sniper.log` for troubleshooting.
+
 ## v1.1.1 - 2026-05-27
 
 ### Sold-listing detection fix

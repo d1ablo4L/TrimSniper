@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import random
 import time
-from . import actions, capture, debug_dump, paths, vision
+from . import actions, capture, paths, vision
 from .config import save_config
 from .vision import Screen
 
@@ -21,10 +21,6 @@ class GameIO:
         self.cfg = cfg
         self.templates = templates
         self._last_screen = None
-        # Cached most-recent frame from first_buyable_slot. Used by the dev
-        # debug-dump path so it can persist the exact pixels the bot decided
-        # on, not a re-grabbed frame from a slightly later moment.
-        self._last_slot_frame = None
 
     def screen(self, targets=None) -> Screen:
         """Identify the current screen. If `targets` is a set of Screen,
@@ -55,7 +51,6 @@ class GameIO:
 
     def first_buyable_slot(self) -> int:
         frame = capture.grab_screen(self.cfg.window_title)
-        self._last_slot_frame = frame
         return vision.first_buyable_slot(frame)
 
     def press(self, name: str, times: int = 1) -> None:
@@ -87,6 +82,10 @@ class Sniper:
         # reload templates, retry once, and never auto-toggle again this
         # session even if the second attempt also fails.
         self._auto_bg_toggled = False
+        # True once we have identified ANY known screen this session.
+        # A recover_failed while still False usually means the game
+        # language isn't English (templates only match the English UI).
+        self._oriented = False
 
     def request_stop(self) -> None:
         self._stop = True
@@ -202,16 +201,22 @@ class Sniper:
             if self._stop:
                 return False
             if s == Screen.SEARCH_CONFIG:
+                self._oriented = True
                 return True
             if s == Screen.AH_LANDING:
+                self._oriented = True
                 return self._enter_search_from_landing(known=s)
             if s == Screen.UNKNOWN:
                 self.sleeper(0.3)
                 s = self.io.screen()
                 continue
+            self._oriented = True
             self._press("esc")
             s = self._await_settle(prev=s)
-        self._status("Lost: start the bot in the Auction House")
+        if self._oriented:
+            self._status("Lost: start the bot in the Auction House")
+        else:
+            self._status("Lost: set game language to English")
         return False
 
     def _enter_search_from_landing(self, known=None) -> bool:
@@ -432,14 +437,6 @@ class Sniper:
             self._back_to_landing(known=result)
             return "no_cars"
 
-        if debug_dump.enabled(cfg):
-            frame = getattr(self.io, "_last_slot_frame", None)
-            states = vision.slot_states(frame) if frame is not None else None
-            debug_dump.dump(cfg, frame, "pre_y", metadata={
-                "slot": slot,
-                "slot_states": [list(s) for s in states] if states else None,
-            })
-
         seen = self._press_until(
             "y", Screen.RESULTS_HAS_CARS,
             {Screen.AUCTION_OPTIONS, Screen.PLAYER_OPTIONS})
@@ -514,7 +511,10 @@ class Sniper:
             self.searches += 1
             if outcome == "recover_failed":
                 self._emit_stats()
-                self._status("Stopped: could not recover")
+                if self._oriented:
+                    self._status("Stopped: could not recover")
+                else:
+                    self._status("Stopped: set game language to English")
                 return "recover_failed"
             if outcome == "failed":
                 self.failed_buyouts += 1
