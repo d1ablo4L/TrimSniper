@@ -133,10 +133,10 @@ class Sniper:
         The RESULTS_HAS_CARS lime banner appears a frame or two before the
         card UI is fully drawn. first_buyable_slot called on that earlier
         frame finds zero populated slots and falsely reports 'all sold'.
-        Polling until any slot reports populated=True gives FH6 time to
-        draw the cards. Returns True once a populated slot is seen, False
-        on timeout (caller should still proceed and let the regular logic
-        decide what to do)."""
+        Polls slot_states tightly between iterations (5ms breather, not
+        the global poll cadence) since the wait only runs on the results
+        page and is short-lived. Returns True once a populated slot is
+        seen, False on timeout (caller should still proceed)."""
         deadline = self.clock() + timeout
         while self.clock() < deadline:
             if self._stop:
@@ -144,7 +144,10 @@ class Sniper:
             for _sold, populated in self.io.slot_states():
                 if populated:
                     return True
-            self._poll_delay()
+            # 5ms breather: keeps capture work from saturating one core in
+            # the tight loop, and gives the FakeClock-based tests a way to
+            # advance their virtual clock so the timeout fires deterministically.
+            self.sleeper(0.005)
         log.info("populated wait timed out after %.1fs", timeout)
         return False
 
