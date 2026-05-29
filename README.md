@@ -58,7 +58,7 @@ Watches the Auction House for the car you set up, buys it out the instant it app
 
 # Download
 
-Grab the latest **FH6-Sniper.zip** from the [Releases page](https://github.com/FrostyIsBored/FH6-Auction-House-Sniper/releases) and extract it anywhere on your PC.
+Grab the latest **TrimSniper.zip** from the [Releases page](https://github.com/d1ablo4L/TrimSniper/releases) and extract it anywhere on your PC.
 
 ---
 
