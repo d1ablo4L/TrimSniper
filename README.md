@@ -47,6 +47,7 @@ Monitora la Casa d'aste per l'auto impostata, la acquista immediatamente non app
 - Preset grafico Molto basso
 - Sfondo animato (Accesivibilità visive) **Disattivato**
 - HDR (OPZIONALE)(AUMENTA IMPUT LAG) - Sfondo animato **Attivato** - in config.json "moving_bg" **true**
+- Lingua del gioco impostata su **English (US)**
 - Connessione Ethernet cablata fortemente consigliata
 
 <img width="1386" height="763" alt="image-4" src="https://github.com/user-attachments/assets/fd2bf173-259f-4458-938b-2267144ce3ab" />
